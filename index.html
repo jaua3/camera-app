@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Camera App</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+  <style>
+    body {
+      margin: 0;
+      background: black;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .controls {
+      position: absolute;
+      bottom: 20px;
+      display: flex;
+      gap: 10px;
+    }
+    button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      background: rgba(255,255,255,0.8);
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <video autoplay playsinline></video>
+
+  <div class="controls">
+    <button id="photoBtn">📷 Photo</button>
+    <button id="recordBtn">⏺️ Record</button>
+    <button id="stopBtn" disabled>⏹️ Stop</button>
+  </div>
+
+  <script>
+    const video = document.querySelector("video");
+    const photoBtn = document.getElementById("photoBtn");
+    const recordBtn = document.getElementById("recordBtn");
+    const stopBtn = document.getElementById("stopBtn");
+
+    let recorder, chunks = [];
+
+    // Start camera
+    async function initCamera() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        video.srcObject = stream;
+      } catch (err) {
+        alert("Camera access denied: " + err);
+      }
+    }
+    initCamera();
+
+    // Take Photo
+    photoBtn.addEventListener("click", () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob(blob => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "photo.png";
+        a.click();
+      });
+    });
+
+    // Start Recording
+    recordBtn.addEventListener("click", () => {
+      chunks = [];
+      recorder = new MediaRecorder(video.srcObject);
+      recorder.ondataavailable = e => chunks.push(e.data);
+      recorder.onstop = () => {
+        const blob = new Blob(chunks, { type: "video/webm" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "video.webm";
+        a.click();
+      };
+      recorder.start();
+      recordBtn.disabled = true;
+      stopBtn.disabled = false;
+    });
+
+    // Stop Recording
+    stopBtn.addEventListener("click", () => {
+      recorder.stop();
+      recordBtn.disabled = false;
+      stopBtn.disabled = true;
+    });
+  </script>
+</body>
+</html>
